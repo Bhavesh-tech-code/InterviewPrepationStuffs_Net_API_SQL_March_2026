@@ -1,0 +1,514 @@
+1.explain in brief your project
+2) State management techniques in mvc?
+3) What is constructor and type.
+4) Oops piller
+5)static class and normal class?
+6.what is cont and readonly keyword?
+7.what is boxing and unboxing?
+8.what is abstract class and interface 
+9.method overriding write code?
+10. constraint in sql
+11.composite key and primary key
+12.what is join and types 
+13.what is trigger? Write syntax ? Types of trigger
+14) Middleware 
+15) Dependency injection and service 
+16) Filter and types 
+17) Dataanotation 
+18) Client side and server side validation 
+19)ViewBag ,ViewData,Temp data
+20)String and Stringbilder 
+21)Index and types 
+Swaping Ram and Shyam 
+22)Jwt token
+
+////////////////////////////////////////////////////////
+
+
+23)how to add secure a api?
+Ways to Secure an API in ASP.NET Core
+🔹 1. Use HTTPS (TLS/SSL)
+
+Always host API over HTTPS instead of HTTP.
+
+Ensures all traffic is encrypted.
+
+In Program.cs:
+
+app.UseHttpsRedirection();
+
+🔹 2. Authentication (Who are you?)
+
+Ensure only authenticated users can access APIs.
+
+Common approaches:
+
+JWT (Bearer Tokens) → Stateless, widely used for APIs.
+
+OAuth2 / OpenID Connect (with IdentityServer, Azure AD, Auth0).
+
+API Keys (simple but less secure).
+
+✅ Example with JWT in controller:
+
+[Authorize]
+[HttpGet("secure-data")]
+public IActionResult GetSecureData()
+{
+    return Ok("This is a secure API");
+}
+
+🔹 3. Authorization (What can you do?)
+
+Restrict access based on roles/claims.
+
+[Authorize(Roles = "Admin")]
+[HttpGet("admin-data")]
+public IActionResult GetAdminData()
+{
+    return Ok("Only Admins can access this");
+}
+
+🔹 4. Input Validation & Data Annotations
+
+Prevent SQL Injection / XSS by validating user input.
+
+public class UserModel
+{
+    [Required, EmailAddress]
+    public string Email { get; set; }
+}
+
+🔹 5. Rate Limiting / Throttling
+
+Prevent abuse (like DoS attacks).
+
+Use middleware such as AspNetCoreRateLimit package.
+
+🔹 6. CORS Policy
+
+Restrict which frontends/domains can access your API.
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecific", policy =>
+    {
+        policy.WithOrigins("https://myclientapp.com")
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+app.UseCors("AllowSpecific");
+
+🔹 7. Logging & Exception Handling
+
+Log unauthorized attempts.
+
+Never expose stack traces in responses.
+
+app.UseExceptionHandler("/error");
+
+🔹 8. Secure Secrets & Configurations
+
+Don’t hardcode secrets.
+
+Use User Secrets (local) or Azure Key Vault (prod).
+
+🎯 Interview Short Answer
+
+"To secure an API in ASP.NET Core, I enable HTTPS, use authentication (JWT or OAuth2), apply authorization with roles/claims, validate inputs, and enforce CORS policies. I also use middleware for logging, exception handling, and rate limiting. In my CRM project, I secured APIs using JWT authentication with role-based authorization, ensuring only authorized users could access sensitive data."
+
+
+---=======================================================================================================================================
+24)If you have 1000 of data and want to retrive how will u optimize that?
+Ways to Optimize Data Retrieval
+🔹 1. Use Pagination (Skip/Take)
+
+Don’t fetch all records at once.
+
+Retrieve data in pages (like 50 or 100 at a time).
+
+✅ Example in LINQ:
+
+var pageSize = 50;
+var pageNumber = 2; // second page
+var data = db.Customers
+             .OrderBy(c => c.Id)
+             .Skip((pageNumber - 1) * pageSize)
+             .Take(pageSize)
+             .ToList();
+
+
+✅ Example in SQL:
+
+SELECT * 
+FROM Customers
+ORDER BY CustomerId
+OFFSET 50 ROWS FETCH NEXT 50 ROWS ONLY;
+
+🔹 2. Select Only Required Columns
+
+Avoid SELECT *.
+
+SELECT Name, Email FROM Customers;
+
+🔹 3. Indexing
+
+Create indexes on frequently queried columns (like Email, CustomerId).
+
+CREATE INDEX idx_customer_email ON Customers(Email);
+
+🔹 4. Use Stored Procedures
+
+Precompiled queries → faster execution.
+
+CREATE PROCEDURE GetPagedCustomers
+    @PageNumber INT, @PageSize INT
+AS
+BEGIN
+    SELECT * FROM Customers
+    ORDER BY CustomerId
+    OFFSET (@PageNumber-1)*@PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END;
+
+🔹 5. AsNoTracking() in EF Core
+
+If data is read-only, don’t track changes (improves performance).
+
+var customers = db.Customers.AsNoTracking().ToList();
+
+🔹 6. Caching
+
+Store frequently accessed data in memory or distributed cache (like Redis).
+
+// In-memory cache example
+var customers = _cache.GetOrCreate("CustomerList", entry =>
+{
+    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+    return db.Customers.ToList();
+});
+
+🔹 7. Async Queries
+
+Use async/await to improve scalability.
+
+var customers = await db.Customers.Take(100).ToListAsync();
+
+🎯 Interview Short Answer
+
+*"If I need to retrieve 1000+ records, I will optimize by using pagination (Skip/Take), selecting only required columns instead of SELECT , and applying indexes on search fields. In .NET Core with EF, I would use AsNoTracking() for read-only queries and async queries for scalability. Additionally, if the data is frequently accessed, I would use caching to reduce database hits."
+
+25)if n number of people are trying to access the same thing or tryng to login at the same time how to handle that?
+Approaches to Handle Concurrent Access
+🔹 1. Connection Handling
+
+Use a connection pool (default in ASP.NET Core with EF Core/ADO.NET).
+
+Ensures DB doesn’t create a new connection for every request.
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+
+🔹 2. Concurrency Control in Database
+
+Optimistic Concurrency → Assume no conflicts; if conflict happens, throw error and retry.
+
+Pessimistic Concurrency → Use locks (like SELECT ... FOR UPDATE).
+
+✅ Example in EF Core (Optimistic Concurrency):
+
+public class User
+{
+    public int Id { get; set; }
+    public string Email { get; set; }
+
+    [Timestamp]  // RowVersion column
+    public byte[] RowVersion { get; set; }
+}
+
+
+If two users update the same row → EF Core throws DbUpdateConcurrencyException.
+
+🔹 3. Rate Limiting & Throttling
+
+Prevent too many requests at once.
+
+Example: Allow max 5 login attempts per minute per user.
+
+Middleware like AspNetCoreRateLimit.
+
+🔹 4. Caching
+
+For frequently accessed data (like product catalog), use in-memory cache or Redis.
+
+Reduces DB load when many users access the same resource.
+
+🔹 5. Load Balancing
+
+Deploy API on multiple servers.
+
+A load balancer (NGINX, Azure Application Gateway) distributes traffic across servers.
+
+🔹 6. Queueing for Heavy Operations
+
+If login triggers heavy processing (like sending OTP emails to thousands of users), use a message queue (Azure Service Bus, RabbitMQ, Kafka).
+
+🎯 Interview Short Answer
+
+"If many users try to access or log in at the same time, I would handle it using connection pooling, caching for repeated reads, and load balancing across servers. For data consistency, I’d use optimistic concurrency in EF Core with row versioning. Additionally, I’d implement rate limiting to prevent abuse and use queues for background jobs like OTP sending. This ensures high performance, scalability, and data integrity."
+
+26)how will the async/await knws how to pick the next task in a sequence or how does it knows all are completed?
+How async/await Works in C#
+🔹 1. async Method
+
+When you mark a method as async, it means that it can use await inside.
+
+An async method always returns either Task, Task<T>, or void.
+
+🔹 2. await
+
+await tells the compiler:
+👉 "Pause here until this task completes, then continue with the rest of the method."
+
+When the awaited task is not yet finished, the method returns control to the caller (non-blocking).
+
+When the task completes, the runtime schedules the continuation (the code after await) on the task scheduler (usually the thread pool).
+
+📌 Execution Flow Example
+public async Task DoWorkAsync()
+{
+    Console.WriteLine("Task 1 started");
+
+    await Task.Delay(2000); // non-blocking wait
+
+    Console.WriteLine("Task 1 finished");
+}
+
+
+👉 What happens?
+
+Console.WriteLine("Task 1 started") runs.
+
+Task.Delay(2000) returns a Task.
+
+await sees the task is not finished → method returns control to caller.
+
+After 2 seconds, the task completes.
+
+The runtime picks up the continuation (Console.WriteLine("Task 1 finished")) and executes it.
+
+📌 How Does It Know When All Are Completed?
+
+For multiple tasks:
+
+public async Task RunTasksAsync()
+{
+    var task1 = Task.Delay(2000);
+    var task2 = Task.Delay(3000);
+
+    await Task.WhenAll(task1, task2);
+
+    Console.WriteLine("All tasks completed");
+}
+
+
+👉 Explanation:
+
+Task.WhenAll(task1, task2) creates a composite task.
+
+It completes only when all inner tasks are done.
+
+The runtime tracks each task’s completion state using the Task object.
+
+📌 Key Mechanism (Behind the Scenes)
+
+async/await uses state machines generated by the compiler.
+
+The compiler rewrites your async method into a state machine.
+
+Each await point becomes a "state transition".
+
+Task objects represent work in progress.
+
+The CLR keeps track of when tasks finish.
+
+The continuation (code after await) is registered as a callback.
+
+When a task finishes, the runtime invokes the registered continuation, resuming your method.
+
+🎯 Interview Short Answer
+
+"In C#, async/await works by using the Task-based Asynchronous Pattern (TAP). The compiler rewrites async methods into a state machine. When await is called, if the task isn’t finished, the method returns control to the caller. The continuation (code after await) is registered, and when the task completes, the runtime executes that continuation. For multiple tasks, methods like Task.WhenAll create a composite task that completes only when all inner tasks are done."
+
+
+28) last transactin in past 6 months 
+
+SELECT c.CustomerId, c.Name
+FROM Customers c
+LEFT JOIN Transactions t 
+    ON c.CustomerId = t.CustomerId 
+    AND t.TransactionDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+WHERE t.CustomerId IS NULL;
+-
+
+
+29)list of employees are there from that i have to get records where firt name is 'Rahul' , check Rahul exists in table and give me that in bollean value using Linq?
+
+List<Employee> employees = new List<Employee>
+{
+    new Employee { Id = 1, FirstName = "Rahul", LastName = "Nivale" },
+    new Employee { Id = 2, FirstName = "Neha", LastName = "Sharma" },
+    new Employee { Id = 3, FirstName = "Rahul", LastName = "Patil" }
+};
+
+// Get employees named Rahul
+var rahulEmployees = employees.Where(e => e.FirstName == "Rahul").ToList();
+
+// Check if Rahul exists
+bool isRahulExists = employees.Any(e => e.FirstName == "Rahul");
+
+// Output
+Console.WriteLine("Employees named Rahul:");
+foreach (var emp in rahulEmployees)
+{
+    Console.WriteLine($"{emp.Id} - {emp.FirstName} {emp.LastName}");
+}
+
+Console.WriteLine($"Is Rahul Exists? {isRahulExists}");
+
+////////////////////////////////////////////////////////////////////////
+
+Select Color,SUM(Balls) as value from Datatable where color in ('pink','blue') group by color; 
+
+With CTEDATA(Select Color,SUM(Balls)from Datatable group by color) select * FROM CTEDATA ORDER BY BALLS desc limit 2; 
+
+
+---========================================================================================================================================================================
+Q. If you have 1000 of data and want to retrive how will u optimize that?
+Ways to Optimize Data Retrieval
+
+Interview Short Answer
+*"If I need to retrieve 1000+ records, 
+I will optimize by using pagination (Skip/Take), 
+selecting only required columns instead of SELECT *, 
+and applying indexes on search fields. In .NET Core with EF, 
+I would use AsNoTracking() for read-only queries and async queries for scalability.
+Additionally, if the data is frequently accessed,
+I would use caching to reduce database hits."
+------------------------------------------------------------
+1. Use Pagination (Skip/Take)
+Don’t fetch all records at once.
+Retrieve data in pages (like 50 or 100 at a time).
+
+Example in LINQ:
+var pageSize = 50;
+var pageNumber = 2; // second page
+var data = db.Customers
+             .OrderBy(c => c.Id)
+             .Skip((pageNumber - 1) * pageSize)
+             .Take(pageSize)
+             .ToList();
+
+
+Example in SQL:
+SELECT * 
+FROM Customers
+ORDER BY CustomerId
+OFFSET 50 ROWS FETCH NEXT 50 ROWS ONLY;
+---------------------------------------------------------------------
+2. Select Only Required Columns
+Avoid SELECT *.
+SELECT Name, Email FROM Customers;
+----------------------------------------------------------
+3. Indexing
+Create indexes on frequently queried columns (like Email, CustomerId).
+CREATE INDEX idx_customer_email ON Customers(Email);
+------------------------------------------------------------------------
+4. Use Stored Procedures
+Precompiled queries → faster execution.
+CREATE PROCEDURE GetPagedCustomers
+    @PageNumber INT, @PageSize INT
+AS
+BEGIN
+    SELECT * FROM Customers
+    ORDER BY CustomerId
+    OFFSET (@PageNumber-1)*@PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END;
+----------------------------------------------------------------------------
+5. AsNoTracking() in EF Core
+If data is read-only, don’t track changes (improves performance).
+var customers = db.Customers.AsNoTracking().ToList();
+---------------------------------------------------------------------------
+6. Caching
+Store frequently accessed data in memory or distributed cache (like Redis).
+// In-memory cache example
+var customers = _cache.GetOrCreate("CustomerList", entry =>
+{
+    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+    return db.Customers.ToList();
+});
+------------------------------------------------------------------------
+7. Async Queries
+Use async/await to improve scalability.
+var customers = await db.Customers.Take(100).ToListAsync();
+
+🎯 Interview Short Answer
+*"If I need to retrieve 1000+ records, 
+I will optimize by using pagination (Skip/Take), 
+selecting only required columns instead of SELECT *, 
+and applying indexes on search fields. In .NET Core with EF, 
+I would use AsNoTracking() for read-only queries and async queries for scalability.
+Additionally, if the data is frequently accessed,
+I would use caching to reduce database hits."
+--====================================================================================================================================================
+
+25)if n number of people are trying to access the same thing or tryng to login at the same time how to handle that?
+Approaches to Handle Concurrent Access
+1. Connection Handling
+Use a connection pool (default in ASP.NET Core with EF Core/ADO.NET).
+Ensures DB doesn’t create a new connection for every request.
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
+---------------------------------
+2. Concurrency Control in Database
+Optimistic Concurrency → Assume no conflicts; if conflict happens, throw error and retry.
+Pessimistic Concurrency → Use locks (like SELECT ... FOR UPDATE).
+✅ Example in EF Core (Optimistic Concurrency):
+
+public class User
+{
+    public int Id { get; set; }
+    public string Email { get; set; }
+
+    [Timestamp]  // RowVersion column
+    public byte[] RowVersion { get; set; }
+}
+
+
+If two users update the same row → EF Core throws DbUpdateConcurrencyException.
+---------------------------------------------------------------------------------------
+3. Rate Limiting & Throttling
+Prevent too many requests at once.
+Example: Allow max 5 login attempts per minute per user.
+Middleware like AspNetCoreRateLimit.
+---------------------------------------------------------------------------------------
+4. Caching
+---------------------------------------------------------------------------------------
+For frequently accessed data (like product catalog), use in-memory cache or Redis.
+Reduces DB load when many users access the same resource.
+---------------------------------------------------------------------------------------
+5. Load Balancing
+Deploy API on multiple servers.
+A load balancer (NGINX, Azure Application Gateway) distributes traffic across servers.
+-------------------------------------------------------------------------------------------------------------------
+6. Queueing for Heavy Operations
+If login triggers heavy processing (like sending OTP emails to thousands of users), use a message queue (Azure Service Bus, RabbitMQ, Kafka).
+
+🎯 Interview Short Answer
+"If many users try to access or log in at the same time,
+ I would handle it using connection pooling, caching for repeated reads, and load balancing across servers. 
+ For data consistency, I’d use optimistic concurrency in EF Core with row versioning.
+ Additionally, I’d implement rate limiting to prevent abuse and use queues for background jobs like OTP sending.
+ This ensures high performance, scalability, and data integrity."
